@@ -16,13 +16,39 @@ output:
 
 ```{r setup, include = FALSE}
 options(htmltools.dir.version = FALSE)
+library(tidyverse)
+races <- readr::read_tsv("data/scottish-hill-races.txt") %>%
+  janitor::clean_names() %>%
+  filter(!is.na(mens_time_min)) %>%
+  mutate(
+    climb_km = climb_m / 1000
+  )
+
+# races <- MASS::hills %>% 
+#   rename(distance_km = dist, mens_time_min = time, climb_m = climb) %>% 
+#   mutate(
+#     climb_km = climb_m / 1000
+#   )
+
+library(rstanarm)
+library(tidybayes)
+m <- stan_glm(
+  mens_time_min ~ distance_km,
+  data = races,
+  # prior = normal(12, 6, autoscale = FALSE),
+  family = gaussian
+)
+d_fitted_distances <- races %>% 
+  tidyr::expand(
+    distance_km = seq(min(distance_km), max(distance_km), length.out = 100)
+  ) %>% 
+  tidybayes::add_fitted_draws(m, n = 20)
 ```
 
 ---
 class: inverse, middle, center
-countdown: 10000
 
-# Using xaringan
+# inverted middle center title
 
 ---
 
@@ -31,21 +57,53 @@ countdown: 10000
 
 ```{r, message = FALSE,  fig.height=4, dev='svg'}
 library(bayesplot)
-draws <- example_mcmc_draws()
-mcmc_areas(draws, regex_pars = "beta")
+# draws <- example_mcmc_draws()
+# mcmc_areas(draws, regex_pars = "beta")
 ```
 
 
 
 ---
 
-# bayes versus classical, in a slide
+# Classical statistics
 
-i want the line of best fit
+Line of best fit
+
+```{r, echo = FALSE, out.width = "50%", fig.show='hold', fig.width=3, fig.height = 4, dpi = 300}
+ggplot(races) + 
+  aes(x = distance_km, y = mens_time_min) + 
+  stat_smooth(method = "lm", se = FALSE) + 
+  geom_point() +
+  labs(
+    title = "a line of best fit",
+    x = "Race distance [km]",
+    y = "Men's race record [min]"
+  )
+
+ggplot(d_fitted_distances) + 
+  aes(x = distance_km, y = .value) + 
+  geom_line(aes(group = .draw), alpha = .2) +
+  geom_point(aes(y = mens_time_min), data = races) +
+  labs(
+    title = "a distribution of plausible lines",
+    x = "Race distance [km]",
+    y = "Men's race record [min]"
+  )
+
+```
+
 
 what lines are plausible, given the data
 
 plot plot
+
+
+---
+
+```{r, echo = FALSE, fig.show='hold', fig.width=4, fig.height = 4, dpi = 300}
+
+```
+
 
 ---
 
@@ -59,6 +117,56 @@ bayesplot provides functions for routine visualization. we make common
 visualization techniques into one-liners.
 
 ---
+
+
+.pull-left[
+An example using a leading `*`:
+
+    ```r
+    if (TRUE) {
+    ** message("Very important!")
+    }
+    ```
+Output:
+```r
+if (TRUE) {
+* message("Very important!")
+}
+```
+
+This is invalid R code, so it is a plain fenced code block that is not executed.
+]
+
+.pull-right[
+```{r}
+draws <- example_mcmc_draws()
+mcmc_areas(draws, regex_pars = "beta")
+```
+
+]
+
+
+
+---
+
+# learn more
+
+We have a pkgdown site: https://mc-stan.org/bayesplot/
+
+
+
+```{r}
+pp_check(m, nreps = 100)
+# tjmisc::ggpreview()
+pp <- posterior_predict(m, draws = 100)
+
+bayesplot::ppc_intervals(races$mens_time_min, pp, races$distance_km)
+bayesplot::ppc_error_scatter_avg_vs_x(races$mens_time_min, pp, x = races$climb_km) + stat_smooth()
+
+
+```
+
+
 
 # Hello Ninja
 
