@@ -1,2 +1,2 @@
 
-A talk for the SatRdays Chicago (April 27, 2019).
+A talk for the SatRdays Chicago conference (April 27, 2019).
