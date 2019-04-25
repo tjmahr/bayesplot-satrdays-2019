@@ -1,11 +1,27 @@
 ---
-title: "bayesplot bullets"
-output: github_document
+title: "bayesplot"
+subtitle: "Diagnostic plots for Bayesian models"
+author: "TJ Mahr<br/>UW--Madison Waisman Center"
+output: 
+  revealjs::revealjs_presentation: 
+    keep_md: true
+    theme: simple
+    self_contained: true
+    css: custom.css
+    reveal_options:
+      chalkboard:
+        theme: whiteboard
+  rmarkdown::github_document: default
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
+library(tidyverse)
+library(rstanarm)
+library(tidybayes)
+library(bayesplot)
+
 fig_width <- 6
-fig_height <- 3
+fig_height <- 4
 
 knitr::opts_chunk$set(
   echo = TRUE, 
@@ -17,13 +33,36 @@ knitr::opts_chunk$set(
 )
 
 options(htmltools.dir.version = FALSE)
+
+# ggtitle <- function(x) {
+#   labs(tag = x)
+# }
+
+# extrafont::loadfonts(device = "postscript")
 extrafont::loadfonts(device = "win")
 
-library(tidyverse)
-library(rstanarm)
-library(tidybayes)
-library(bayesplot)
+bayesplot_theme_replace(
+  plot.caption = element_text(size = rel(1)),
+  plot.title = element_text(
+    family = "Consolas", hjust = 0, size = rel(.8), 
+    margin = margin(0, 0, 5.5, 0, unit = "pt"))
+)
 
+self_title <- function(expr) {
+  p <- rlang::enexpr(expr)
+  title <- rlang::quo_text(p) %>% 
+    styler::style_text() %>% 
+    as.character() %>% 
+    stringr::str_replace_all(" [+] ", " +\n  ") %>% 
+    paste0(collapse = "\n")
+
+  eval(p) + ggtitle(title)
+}
+
+
+```
+
+```{r setup-data, include = FALSE}
 races_raw <- readr::read_tsv("data/scottish-hill-races.txt") %>%
   janitor::clean_names() %>%
   filter(!is.na(mens_time_min)) %>%
@@ -39,284 +78,272 @@ races_raw <- readr::read_tsv("data/scottish-hill-races.txt") %>%
 
 races <- races_raw %>% 
   select(race, distance_km, climb_km, time_min)
-
-ggcaption <- function(x) {
-  labs(caption = x)
-}
-
-bayesplot_theme_replace(
-  plot.caption = element_text(family = "Consolas", hjust = 1, size = rel(.8))
-)
-
-m <- stan_glm(
-  time_min ~ distance_km,
-  data = races,
-  prior = normal(0, 1, autoscale = TRUE),
-  family = gaussian
-)
-# library("rstanarm")
-# bad_fit <- stan_glm(
-#   mpg ~ ., data = mtcars,
-#   prior = hs(), iter = 400, adapt_delta = 0.8)
-# 
-
-
-d_fitted_distances <- races %>% 
-  tidyr::expand(
-    distance_km = seq(min(distance_km), max(distance_km), length.out = 100)
-  ) %>% 
-  tidybayes::add_fitted_draws(m, n = 20)
 ```
 
 
-# bayesplot
-
-Diagnostic plots for Bayesian models
-
-```{r}
-library(bayesplot)
-```
-
-
-# Why are Bayesian models different?
-
-- Classical regression: line of best fit (maximum likelihood)
-
-- Bayesian regression: all plausible lines given data and model (posterior distribution)
-
-Flexible. Generative. Include prior information. Quantify uncertainty about any
-statistic or prediction from the model.
-
-# The problem
-
-- That distribution is hard to compute so we approximate it by sampling from it.
-- The model is a collection of parameter draws from the distribution. 
-
-
-# Toy model
-
-Scottish Hill races. Try to predict race time from race distance and hill height.
-
-```{r}
-races
-```
-
-
-```{r, eval = TRUE, results='hide'}
+```{r setup-models, include = FALSE}
 m1 <- stan_glm(
   time_min ~ distance_km,
   data = races,
   family = gaussian,
   prior = normal(0, 1, autoscale = TRUE)
 )
+
 m2 <- stan_glm(
   time_min ~ distance_km * climb_km,
   data = races,
   family = gaussian,
   prior = normal(0, 1, autoscale = TRUE)
 )
+
+# Change outcome measure to get chains sampling a different parameter space
+m1_spoof <- stan_glm(
+  womens_time_min ~ distance_km,
+  data = races_raw,
+  family = gaussian,
+  prior = normal(0, 1, autoscale = TRUE)
+)
+
+# Overwrite some draws in chain 2 to simulate bad mixing
+bad_chains <- as.array(m1)
+bad_chains[1:300, 2, ] <- as.array(m1_spoof)[1:300, 2, ]
+
+# multilevel model example
+m_eight_schools <- shinystan::eight_schools@posterior_sample
+
+d_fitted_distances <- races %>% 
+  tidyr::expand(
+    distance_km = seq(min(distance_km), max(distance_km), length.out = 100)
+  ) %>% 
+  tidybayes::add_fitted_draws(m1, n = 20)
 ```
 
-# The model is a distribution
 
-
-```{r, fig.show="hide"}
-m1_draws <- as.matrix(m1) 
-mcmc_hist(m1_draws, pars = c("(Intercept)", "distance_km"))
-```
-```{r, echo = FALSE}
-last_plot() +
-  ggcaption("mcmc_hist(draws, pars)")
-```
-
-```{r, fig.show='hide'}
-m1_draws <- as.matrix(m1) 
-mcmc_hist(m1_draws, pars = c("(Intercept)", "distance_km"))
-```
-```{r, echo = FALSE, message = FALSE}
-last_plot() +
-  ggcaption("mcmc_hist(draws, pars)")
-```
-
-```{r, fig.show='hide'}
-mcmc_intervals(m1_draws)
-```
-```{r, echo = FALSE, message = FALSE}
-last_plot() +
-  ggcaption("mcmc_intervals(draws)")
-```
-
-```{r, fig.show='hide'}
-mcmc_areas(m1_draws, area_method = "equal height")
-```
-```{r, echo = FALSE}
-last_plot() +
-  ggcaption("mcmc_areas(draws, area_method)")
-```
-
+---
 
 ```{r}
-color_scheme_set("orange")
-multilevel <- shinystan::eight_schools@posterior_sample
-mcmc_areas_ridges(multilevel, prob = .8)
+library(bayesplot)
 ```
-```{r, echo = FALSE}
-last_plot() +
-  ggcaption("mcmc_areas_ridges(draws, prob)")
+
+- Plotting functions for visual diagnostics and model criticism
+- Part of the Stan universe but works with generic MCMC samples
+- Built on top of ggplot2
+- https://mc-stan.org/bayesplot/
+
+
+## Bayesian models in 15 seconds
+
+  - **Classical regression**: line of best fit (*maximum likelihood*)
+  - **Bayesian regression**: all plausible lines given data and data-generating
+    process (*posterior distribution*)
+
+. . .
+
+1. Model is a distribution. 
+2. Model is generative.
+3. Model's distribution comes from a sampling algorithm.
+
+## Scottish Hill races
+
+Try to predict race time from race distance and hill height.
+
+- m1: `r format(formula(m1))`
+- m2: `r format(formula(m2))`
+
+```{r}
+races
+```
+
+## Model is a distribution {data-background=#ee00ee}
+
+## Marginal distributions of parameters
+
+```{r, echo = FALSE, message = FALSE}
+m1_draws <- as.matrix(m1) 
+self_title(
+  mcmc_hist(m1_draws)
+)
+```
+
+## Uncertainty/compatibility intervals
+
+```{r, echo = FALSE, message = FALSE}
+self_title(
+  mcmc_intervals(m1_draws) 
+)
+```
+
+## Intervals plus density
+
+```{r, echo = FALSE, message = FALSE}
+self_title(
+  mcmc_areas(m1_draws, area_method = "equal height") 
+)
+```
+
+
+## Ridgelines help hierarchical models
+
+
+```{r, echo = FALSE, message = FALSE}
+color_scheme_set("red")
+self_title(
+  mcmc_areas_ridges(m_eight_schools, prob = .8) + 
+    geom_vline(xintercept = 0) 
+)
 color_scheme_set("blue")
 ```
+
+
 
 ## Joint distributions
 
-Those other views are looking at the side of hill. We can look from above too.
+<!-- Those other views are looking at the side of hill. We can look from above too. -->
 
-
-```{r, fig.show='hide'}
-mcmc_scatter(m1_draws, c("(Intercept)", "distance_km"), alpha = 0.15) + 
-  stat_density_2d(color = "black", size = .25)
-```
-```{r, echo = FALSE, fig.width=fig_width - 1}
-last_plot() +
-  ggcaption("mcmc_scatter(draws, pars, alpha) + stat_density_2d(color, size)")
+```{r, echo = FALSE, fig.height = fig_height}
+self_title(
+  mcmc_scatter(m1_draws, c("(Intercept)", "distance_km"), alpha = 0.15) + 
+    stat_density_2d(color = "black", size = .25)
+)
 ```
 
+## Hex bin
 
-```{r, fig.show='hide'}
-mcmc_hex(m1_draws, c("(Intercept)", "distance_km"))
-```
-```{r, echo = FALSE, fig.width=5}
-last_plot() +
-  ggcaption("mcmc_hex(draws, pars)")
-```
-
-
-
-
-
-# Generative models
-
-Bayesian models are generative. You describe a data-generating process and it
-provides parameters for the process that compatible with the data.
-
-Posterior predictive checks: If I make the model simulate new data, does it look
-like the original data?
-
-# Posterior Predictive Boxplots
-
-Do the simulations have similar quantiles?
-
-```{r, fig.show='hide'}
-yrep1 <- posterior_predict(m1, draws = 40)
-ppc_boxplot(y = races$time_min, yrep = yrep1[1:6, ])
-```
 ```{r, echo = FALSE}
-last_plot() +
-  ggcaption("ppc_boxplot(y, yrep)")
+self_title(
+  mcmc_hex(m1_draws, pars = c("(Intercept)", "distance_km"))
+)
 ```
 
-# Posterior Predictive Density
 
-```{r, fig.show='hide'}
-ppc_dens_overlay(y = races$time_min, yrep = yrep1) + 
-  ggtitle("time_min ~ distance_km")
-```
-```{r, echo = FALSE}
-last_plot() + 
-  ggcaption("ppc_dens_overlay(y, yrep)") 
+
+
+## Model is generative {data-background=#ee00ee}
+
+
+## Bayesian models are generative
+
+  - You specify a data-generating process.
+  - Model provides a sample of parameter values for the process that are
+    compatible with the data.
+
+_Posterior predictive checks_
+
+  - On each draw of posterior distribution, have the model re-predict the
+    original dataset.
+  - **Does the replicated data look like the original data?**
+
+## Boxplot of observed versus 6 replications
+
+```{r, echo = FALSE, message = FALSE}
+m1_yrep_50 <- posterior_predict(m1, draws = 50)
+m1_yrep_6 <- posterior_predict(m1, draws = 6)
+self_title(
+  ppc_boxplot(y = m1$y, yrep = m1_yrep_6) + geom_hline(yintercept = 0)
+)
 ```
 
-```{r, fig.show='hide'}
-yrep2 <- posterior_predict(m2, draws = 40)
+## Density of observed versus 50 replications
+
+```{r, echo = FALSE, message = FALSE}
+self_title(
+  ppc_dens_overlay(y = m1$y, yrep = m1_yrep_50) + 
+    labs(caption = "time_min ~ distance_km")
+) 
+```
+
+## Density from a better model
+
+```{r, echo = FALSE, message = FALSE}
+m2_yrep2_50 <- posterior_predict(m2, draws = 50)
 color_scheme_set("purple")
-ppc_dens_overlay(y = races$time_min, yrep = yrep2) + 
-  ggtitle("time_min ~ distance_km * climb_km")
-```
-```{r, echo = FALSE}
-last_plot() + 
-  ggcaption("ppc_dens_overlay(y, yrep)") 
+
+self_title(
+  ppc_dens_overlay(y = m1$y, yrep = m2_yrep2_50) + 
+    labs(caption = "time_min ~ distance_km * climb_km")  
+)
+
 color_scheme_set("blue")
 ```
 
 
-# Pointwise Posterior Predictions
+## How well are individual data points predicted?
 
-How well are individual data points predicted?
+```{r, echo = FALSE, message = FALSE}
+m1_yrep_1000 <- posterior_predict(m1, draws = 1000)
 
-```{r, fig.show='hide'}
-yrep1 <- posterior_predict(m1, draws = 1000)
-ppc_intervals(races$time_min, yrep1, x = races$distance_km, prob_outer = .95)
-```
-```{r, echo = FALSE}
-last_plot() +
-  ggcaption("ppc_intervals(y, yrep, x, prob_outer)")
-```
-
-# Pointwise Posterior Predictive Error
-
-Error of individual predictions?
-
-```{r, fig.show='hide'}
-ppc_error_scatter_avg_vs_x(m1$y, yrep1, x = races$climb_km) + 
-  stat_smooth(color = "grey30")
-```
-```{r, echo = FALSE}
-last_plot() +
-  ggcaption("ppc_error_scatter_avg_vs_x(y, yrep, x) + stat_smooth()")
-```
-
-```{r}
-ppc_stat(m1$y, yrep1, stat = "mean")
-
-```
-
-
-# trace plots
-
-Bayesian models are estimated by Markov Chain Monte Carlo. We run chains
-
-
-```{r}
-
-m <- stan_glm(
-  mens_time_min ~ distance_km,
-  data = races_raw,
-  prior = normal(0, 1),
-  family = gaussian
+self_title(
+  ppc_intervals(
+    y = m1$y, 
+    yrep = m1_yrep_1000, 
+    x = races$distance_km, 
+    prob_outer = .95
+  ) + 
+    xlab(races$distance_km)
 )
+```
 
 
-# Change y to mimic a chain being stuck in a different mode
-m1 <- stan_glm(
-  womens_time_min ~ distance_km,
-  data = races_raw,
-  family = gaussian
+## Pointwise prediction error
+
+```{r, echo = FALSE, message = FALSE, fig.width = fig_width + .5}
+self_title(
+  ppc_error_scatter_avg_vs_x(
+    y = m1$y,
+    yrep = m1_yrep_1000, 
+    x = races$climb_km
+  ) + 
+  stat_smooth(color = "grey30") + 
+  xlab("climb_km")
 )
-
-chains <- as.array(m)
-chains[1:400, 2, ] <- as.array(m1)[1:400, 2, ]
-
-draws <- as.matrix(m)
-mcmc_trace(chains)
-mcmc_areas(chains)
 ```
 
-Fuzzy caterpillar: Good mixing of chains
+## Model's distribution comes from a sampling algorithm {data-background=#9BA7B0}
 
-```{r}
-mcmc_trace(as.array(m), "distance_km") + facet_wrap("chain")
+---
+
+- Bayesian models are estimated by Markov Chain Monte Carlo. 
+- Multiple *chains* sample the posterior distribution in parallel.
+- **Did these chains adequately sample the posterior distribution?**
+
+
+## The classic traceplot
+
+Plot of chains over time. Should be a fuzzy caterpillar.
+
+```{r, echo = FALSE, message = FALSE}
+self_title(
+  mcmc_trace(as.array(m1), pars = "distance_km")
+)
 ```
+
+## The classic traceplot
 
 Bad mixing of chains
 
-```{r}
-mcmc_trace(chains, "distance_km")
+```{r, echo = FALSE, message = FALSE}
+self_title(
+  mcmc_trace(bad_chains, "distance_km")
+)
 ```
 
-```{r}
+## New diagnostics are coming
 
-# as.array(chains)[, 3, ] %>% as.data.frame() %>% 
-#   ggplot() + 
-#   aes(x = `(Intercept)`, y = distance_km) + 
-#   geom_path(alpha = .2)
-# as.data.frame()
+```{r, out.width="100%", echo = FALSE}
+knitr::include_graphics("new-rhat.png")
 ```
+
+## Do *ranks* mix well among chains?
+
+Currently in a pull request I am working on..
+
+```{r, echo = FALSE, message = FALSE}
+# remotes::install_github(
+#   "stan-dev/bayesplot",
+#   ref = remotes::github_pull(179)
+# )
+self_title(
+  mcmc_rank_overlay(bad_chains, "distance_km")  
+)
+```
+
