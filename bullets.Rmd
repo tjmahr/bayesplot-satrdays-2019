@@ -9,9 +9,6 @@ output:
     self_contained: true
     css: 
       - align-left.css
-    reveal_options:
-      chalkboard:
-        theme: whiteboard
   rmarkdown::github_document: default
 ---
 
@@ -121,15 +118,25 @@ d_fitted_distances <- races %>%
 ```
 
 
----
+## {data-background-iframe="https://kidspeech.wisc.edu/other-projects/communciation-development-in-school-age-children-with-cerebral-palsy/"}
 
-  - I study how children with motor disabilities learn to speak and communicate
-  - I work with repeated-measures time-series data from a heterogenous
-    population
-  - Bayesian models provide a flexible and coherent framework for modeling this
-    data
+  <!-- - I study how children with motor disabilities learn to speak and communicate -->
+  <!-- - I work with repeated-measures time-series data from a heterogenous -->
+  <!--   population -->
+  <!-- - Bayesian models provide a flexible and coherent framework for modeling this -->
+  <!--   data -->
 
-*image*
+<div style="position: absolute; width: 60%; top: 300px; right: 0px; box-shadow: 0 1px 4px rgba(0,0,0,0.5), 0 5px 25px rgba(0,0,0,0.2); background-color: rgba(223, 233, 245, 1); padding: 20px; font-size: 30px; text-align: left;">
+
+Hello! 👋
+
+I study how children with motor disorders learn to speak.
+
+Bayesian stats let me handle repeated-measures time-series from hetereogenous
+populations.
+
+</div>
+
 
 ---
 
@@ -346,8 +353,8 @@ knitr::include_graphics("new-rhat.png")
 
 ## Do *ranks* mix well among chains?
 
-Currently in a pull request I am working on..
-.
+Currently in a pull request I am working on
+
 ```{r, echo = FALSE, message = FALSE}
 # remotes::install_github(
 #   "stan-dev/bayesplot",
@@ -358,9 +365,16 @@ self_title(
 )
 ```
 
-## Plus much more
+## {data-background-iframe="https://mc-stan.org/bayesplot/"}
 
-*image of webpage*
+<div style="position: absolute; width: 60%; right: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.5), 0 5px 25px rgba(0,0,0,0.2); background-color: rgba(223, 233, 245, 1); padding: 20px; font-size: 40px; text-align: left;">
+
+Plus more 
+
+https://mc-stan.org/bayesplot/
+
+</div>
+
 
 ## Acknowledgments
 
