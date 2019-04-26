@@ -123,6 +123,16 @@ d_fitted_distances <- races %>%
 
 ---
 
+  - I study how children with motor disabilities learn to speak and communicate
+  - I work with repeated-measures time-series data from a heterogenous
+    population
+  - Bayesian models provide a flexible and coherent framework for modeling this
+    data
+
+*image*
+
+---
+
 ```{r}
 library(bayesplot)
 ```
@@ -133,17 +143,6 @@ library(bayesplot)
 - https://mc-stan.org/bayesplot/
 
 
-## Bayesian models in 15 seconds
-
-  - **Classical regression**: line of best fit (*maximum likelihood*)
-  - **Bayesian regression**: all plausible lines given data and data-generating
-    process (*posterior distribution*)
-
-. . .
-
-1. Model is a distribution. 
-2. Model is generative.
-3. Model's distribution comes from a sampling algorithm.
 
 ## Scottish Hill races
 
@@ -155,6 +154,20 @@ Try to predict race time from race distance and hill height.
 ```{r}
 races
 ```
+
+
+
+## Bayesian models in 15 seconds
+
+  - **Classical regression**: line of best fit (*maximum likelihood*)
+  - **Bayesian regression**: all plausible lines given data and data-generating
+    process (*posterior distribution*)
+
+<!-- 1. Model is a distribution.  -->
+<!-- 2. Model is generative. -->
+<!-- 3. Model's distribution comes from a sampling algorithm. -->
+
+
 
 ## Model is a distribution {data-background=#ee00ee}
 
@@ -345,3 +358,12 @@ self_title(
 )
 ```
 
+## Plus much more
+
+*image of webpage*
+
+## Acknowledgments
+
+* Shoutout to Jonah Gabry, the lead author of the package
+* Rest of Stan team
+* Supported by ...grant...
