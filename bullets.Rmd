@@ -132,8 +132,8 @@ Hello! 👋
 
 I study how children with motor disorders learn to speak.
 
-Bayesian stats let me handle repeated-measures time-series from hetereogenous
-populations.
+Bayesian stats let me handle repeated-measures time-series data from
+hetereogenous populations.
 
 </div>
 
@@ -379,5 +379,5 @@ https://mc-stan.org/bayesplot/
 ## Acknowledgments
 
 * Shoutout to Jonah Gabry, the lead author of the package
-* Rest of Stan team
-* Supported by ...grant...
+* Rest of Stan team.
+* Supported by NIH R01DC009411, R01DC015653.
