@@ -7,7 +7,8 @@ output:
     keep_md: true
     theme: simple
     self_contained: true
-    css: custom.css
+    css: 
+      - align-left.css
     reveal_options:
       chalkboard:
         theme: whiteboard
@@ -29,7 +30,8 @@ knitr::opts_chunk$set(
   collapse = TRUE, 
   dpi = 600, 
   fig.width = fig_width, 
-  fig.height = fig_height
+  fig.height = fig_height,
+  cache = TRUE
 )
 
 options(htmltools.dir.version = FALSE)
@@ -227,7 +229,7 @@ self_title(
   - Model provides a sample of parameter values for the process that are
     compatible with the data.
 
-_Posterior predictive checks_
+### Posterior predictive checks
 
   - On each draw of posterior distribution, have the model re-predict the
     original dataset.
@@ -279,7 +281,7 @@ self_title(
     x = races$distance_km, 
     prob_outer = .95
   ) + 
-    xlab(races$distance_km)
+    xlab("distance_km")
 )
 ```
 
@@ -307,9 +309,7 @@ self_title(
 - **Did these chains adequately sample the posterior distribution?**
 
 
-## The classic traceplot
-
-Plot of chains over time. Should be a fuzzy caterpillar.
+## Classic traceplot 🐛
 
 ```{r, echo = FALSE, message = FALSE}
 self_title(
@@ -317,9 +317,7 @@ self_title(
 )
 ```
 
-## The classic traceplot
-
-Bad mixing of chains
+## Traceplot with bad mixing of chains
 
 ```{r, echo = FALSE, message = FALSE}
 self_title(
@@ -336,7 +334,7 @@ knitr::include_graphics("new-rhat.png")
 ## Do *ranks* mix well among chains?
 
 Currently in a pull request I am working on..
-
+.
 ```{r, echo = FALSE, message = FALSE}
 # remotes::install_github(
 #   "stan-dev/bayesplot",
