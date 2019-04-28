@@ -20,6 +20,8 @@ library(bayesplot)
 
 fig_width <- 6
 fig_height <- 4
+fig_width <- 4.5
+fig_height <- 3
 
 knitr::opts_chunk$set(
   echo = TRUE, 
@@ -28,6 +30,7 @@ knitr::opts_chunk$set(
   dpi = 600, 
   fig.width = fig_width, 
   fig.height = fig_height,
+  warning = FALSE,
   cache = TRUE
 )
 
@@ -114,7 +117,7 @@ d_fitted_distances <- races %>%
   tidyr::expand(
     distance_km = seq(min(distance_km), max(distance_km), length.out = 100)
   ) %>% 
-  tidybayes::add_fitted_draws(m1, n = 20)
+  tidybayes::add_fitted_draws(m1, n = 50)
 ```
 
 
@@ -130,23 +133,34 @@ d_fitted_distances <- races %>%
 
 Hello! 👋
 
-I study how children with motor disorders learn to speak.
+I study how children with motor disorders learn to speak and communicate.
 
-Bayesian stats let me handle repeated-measures time-series data from
-hetereogenous populations.
+Bayesian stats let me handle repeated-measures, time-series data from
+heterogeneous populations.
 
 </div>
 
 
+## My current modeling project
+
+```{r my-current-project, echo = FALSE, out.width="100%", fig.cap = "My current project looks at speech intelligibility (y) changes with age (x). The figure shows a spaghetti plot of model fits and observed data for one child, showing a nice fit to the data. The right shows three histograms that describe when the lines cross various intelligibility thresholds."}
+knitr::include_graphics("my-current-project.png")
+```
+
+
 ---
 
-```{r}
+To get my cool model to work, I needed diagnostics...
+
+```{r packages-demo}
+library(ggplot2)
 library(bayesplot)
 ```
 
 - Plotting functions for visual diagnostics and model criticism
 - Part of the Stan universe but works with generic MCMC samples
 - Built on top of ggplot2
+- Simple functions to make routine visualization easy
 - https://mc-stan.org/bayesplot/
 
 
@@ -155,10 +169,9 @@ library(bayesplot)
 
 Try to predict race time from race distance and hill height.
 
-- m1: `r format(formula(m1))`
-- m2: `r format(formula(m2))`
+`stan_glm(time_min ~ distance_km, data = races, ...)`
 
-```{r}
+```{r races-data}
 races
 ```
 
@@ -166,21 +179,17 @@ races
 
 ## Bayesian models in 15 seconds
 
-  - **Classical regression**: line of best fit (*maximum likelihood*)
-  - **Bayesian regression**: all plausible lines given data and data-generating
-    process (*posterior distribution*)
+**Classical regression**: line of best fit (*maximum likelihood*)
 
-<!-- 1. Model is a distribution.  -->
-<!-- 2. Model is generative. -->
-<!-- 3. Model's distribution comes from a sampling algorithm. -->
-
+**Bayesian regression**: all plausible lines given data and data-generating 
+process (*posterior distribution*)
 
 
 ## Model is a distribution {data-background=#ee00ee}
 
 ## Marginal distributions of parameters
 
-```{r, echo = FALSE, message = FALSE}
+```{r hist, echo = FALSE, message = FALSE, fig.cap="Three facets showing histograms of posterior samples for the model's intercept, main predictor (distance) and the error term sigma."}
 m1_draws <- as.matrix(m1) 
 self_title(
   mcmc_hist(m1_draws)
@@ -189,15 +198,22 @@ self_title(
 
 ## Uncertainty/compatibility intervals
 
-```{r, echo = FALSE, message = FALSE}
+```{r intervals, echo = FALSE, message = FALSE, fig.cap="Plot showing the median and two compatibility intervals for each parameter. We use this compare the sign and magnitude of model parameters."}
 self_title(
   mcmc_intervals(m1_draws) 
 )
 ```
 
+## Maybe you can do better? Go for it.
+
+```{r intervals-data, echo = TRUE, message = FALSE}
+mcmc_intervals_data(m1_draws) %>% 
+  glimpse()
+```
+
 ## Intervals plus density
 
-```{r, echo = FALSE, message = FALSE}
+```{r areas, echo = FALSE, message = FALSE, fig.width = fig_width + .5, fig.cap="Like the previous interval plot but with density curves drawn instead."}
 self_title(
   mcmc_areas(m1_draws, area_method = "equal height") 
 )
@@ -207,7 +223,7 @@ self_title(
 ## Ridgelines help hierarchical models
 
 
-```{r, echo = FALSE, message = FALSE}
+```{r ridgelines, echo = FALSE, message = FALSE, fig.cap="A set of several partially overlapping density curves with shaded areas showing 80% intervals."}
 color_scheme_set("red")
 self_title(
   mcmc_areas_ridges(m_eight_schools, prob = .8) + 
@@ -222,7 +238,7 @@ color_scheme_set("blue")
 
 <!-- Those other views are looking at the side of hill. We can look from above too. -->
 
-```{r, echo = FALSE, fig.height = fig_height}
+```{r scatter, echo = FALSE, fig.width = 6, fig.height = 4, fig.cap="A scatterplot of posterior draws of the intercept and distance effect with contour lines overlaid."}
 self_title(
   mcmc_scatter(m1_draws, c("(Intercept)", "distance_km"), alpha = 0.15) + 
     stat_density_2d(color = "black", size = .25)
@@ -231,7 +247,7 @@ self_title(
 
 ## Hex bin
 
-```{r, echo = FALSE}
+```{r hex, echo = FALSE, fig.width = 6, fig.height = 4, fig.cap="Another 2-d density plot but this one uses hexagonal tiles and uses shading to show density."}
 self_title(
   mcmc_hex(m1_draws, pars = c("(Intercept)", "distance_km"))
 )
@@ -257,7 +273,7 @@ self_title(
 
 ## Boxplot of observed versus 6 replications
 
-```{r, echo = FALSE, message = FALSE}
+```{r ppc-boxplot, echo = FALSE, message = FALSE, fig.cap = "Boxplot of observed versus 6 replications"}
 m1_yrep_50 <- posterior_predict(m1, draws = 50)
 m1_yrep_6 <- posterior_predict(m1, draws = 6)
 self_title(
@@ -267,7 +283,7 @@ self_title(
 
 ## Density of observed versus 50 replications
 
-```{r, echo = FALSE, message = FALSE}
+```{r ppc-dens-overlay, echo = FALSE, message = FALSE, fig.cap = "Density of observed versus 50 replications. The model replications do not agree with the data."}
 self_title(
   ppc_dens_overlay(y = m1$y, yrep = m1_yrep_50) + 
     labs(caption = "time_min ~ distance_km")
@@ -276,7 +292,7 @@ self_title(
 
 ## Density from a better model
 
-```{r, echo = FALSE, message = FALSE}
+```{r ppc-dens-overlay2, echo = FALSE, message = FALSE, fig.cap = "Density of observed versus 50 replications. The model replications agree with the data."}
 m2_yrep2_50 <- posterior_predict(m2, draws = 50)
 color_scheme_set("purple")
 
@@ -291,7 +307,7 @@ color_scheme_set("blue")
 
 ## How well are individual data points predicted?
 
-```{r, echo = FALSE, message = FALSE}
+```{r ppc-intervals, echo = FALSE, fig.width = 6, fig.height = 4, fig.cap = "Plot of the observed data by distance. For each observation, there is a 95% interval showing the model's range of simulations. As the distance increases, the intervals get farther from the observations, more or less."}
 m1_yrep_1000 <- posterior_predict(m1, draws = 1000)
 
 self_title(
@@ -308,7 +324,7 @@ self_title(
 
 ## Pointwise prediction error
 
-```{r, echo = FALSE, message = FALSE, fig.width = fig_width + .5}
+```{r ppc-error-scatter-avg-vs-x, echo = FALSE, message = FALSE, fig.width = 6.25, fig.height = 4, fig.cap = "Instead of showing observed versus simulation, this shows the average of observed minus simulated. The x axis is hill height. A LOESS smooth shows that error increases with hill height."}
 self_title(
   ppc_error_scatter_avg_vs_x(
     y = m1$y,
@@ -331,7 +347,7 @@ self_title(
 
 ## Classic traceplot 🐛
 
-```{r, echo = FALSE, message = FALSE}
+```{r traceplot, echo = FALSE, message = FALSE, fig.cap = "The canonical traceplot. It looks like a hairy caterpillar. It's good."}
 self_title(
   mcmc_trace(as.array(m1), pars = "distance_km")
 )
@@ -339,7 +355,7 @@ self_title(
 
 ## Traceplot with bad mixing of chains
 
-```{r, echo = FALSE, message = FALSE}
+```{r bad-trace, echo = FALSE, message = FALSE, fig.cap = "Traceplot where one of the chains gets stuck. It's bad."}
 self_title(
   mcmc_trace(bad_chains, "distance_km")
 )
@@ -347,21 +363,19 @@ self_title(
 
 ## New diagnostics are coming
 
-```{r, out.width="100%", echo = FALSE}
+```{r new-rhat, out.width="100%", echo = FALSE, fig.cap = "Figure showing the abstract of the new Rhat paper. https://arxiv.org/abs/1903.08008"}
 knitr::include_graphics("new-rhat.png")
 ```
 
-## Do *ranks* mix well among chains?
+## [wip] Do *ranks* mix well among chains?
 
-Currently in a pull request I am working on
-
-```{r, echo = FALSE, message = FALSE}
+```{r rank-trace, echo = FALSE, message = FALSE, fig.cap = "Figure showing mixture of rankings among the chains from the bad traceplot. Chain 2 dominates one end of the rankings."}
 # remotes::install_github(
 #   "stan-dev/bayesplot",
 #   ref = remotes::github_pull(179)
 # )
 self_title(
-  mcmc_rank_overlay(bad_chains, "distance_km")  
+  mcmc_rank_overlay(bad_chains, "distance_km")
 )
 ```
 
@@ -369,7 +383,7 @@ self_title(
 
 <div style="position: absolute; width: 60%; right: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.5), 0 5px 25px rgba(0,0,0,0.2); background-color: rgba(223, 233, 245, 1); padding: 20px; font-size: 40px; text-align: left;">
 
-Plus more 
+Plus dozens more plots
 
 https://mc-stan.org/bayesplot/
 
@@ -380,4 +394,6 @@ https://mc-stan.org/bayesplot/
 
 * Shoutout to Jonah Gabry, the lead author of the package
 * Rest of Stan team.
-* Supported by NIH R01DC009411, R01DC015653.
+* My work is supported by NIH R01DC009411, R01DC015653
+
+https://github.com/tjmahr/bayesplot-satrdays-2019
